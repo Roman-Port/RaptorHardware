@@ -1,5 +1,5 @@
 #include "include.h"
-#include <libairspy/airspy.h>
+#include <airspy.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <cassert>

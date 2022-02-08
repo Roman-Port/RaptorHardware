@@ -1,7 +1,7 @@
 add_library (raptorhw-airspy main.cpp  "include.h")
 
 # Find AirSpy library
-find_package(airspy CONFIG REQUIRED)
+add_subdirectory(lib)
 
 # Link our library to the AirSpy one
-target_link_libraries(raptorhw-airspy PRIVATE airspy)
+target_link_libraries(raptorhw-airspy PRIVATE airspy-static)
