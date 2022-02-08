@@ -41,7 +41,7 @@ public:
 		return max_value + 1;
 	}
 	virtual void get_value_label(int index, char* result, size_t resultLen) override {
-		sprintf_s(result, resultLen, "%i", index);
+		snprintf(result, resultLen, "%i", index);
 	}
 
 	virtual int get_value() override {
@@ -210,7 +210,7 @@ public:
 		rx_ctx(NULL)
 	{
 		//Format serial number as string
-		sprintf_s(serial_string, sizeof(serial_string), "%llx", serial);
+		snprintf(serial_string, sizeof(serial_string), "%llx", serial);
 	}
 
 	~airspy_instance_t() {
@@ -366,7 +366,7 @@ public:
 	airspy_candidate_t(uint64_t serial) : serial(serial)
 	{
 		//Format serial number as string
-		sprintf_s(serial_string, sizeof(serial_string), "%llx", serial);
+		snprintf(serial_string, sizeof(serial_string), "%llx", serial);
 	}
 
 	virtual const char* get_name() override {

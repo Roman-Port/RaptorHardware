@@ -74,7 +74,7 @@ public:
 		}
 
 		//Format
-		sprintf_s(result, resultLen, "%i.%i dB", gains[index] / 10, gains[index] % 10);
+		snprintf(result, resultLen, "%i.%i dB", gains[index] / 10, gains[index] % 10);
 	}
 
 	virtual int get_value() override {
