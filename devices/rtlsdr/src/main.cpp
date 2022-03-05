@@ -1,13 +1,15 @@
-#include "include.h"
+#include <raptorhw_device_rtlsdr.h>
+#include <raptorhw_util.h>
 #include "conversion_table.h"
+#include "info.h"
+#include "../lib/include/rtl-sdr.h"
+#include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <rtl-sdr.h>
 #include <cassert>
 #include <cstring>
 
-#define RTLSDR_INFO_BUFFER_SIZE 257
 #define RTLSDR_BUFFER_SIZE 16384
 #define RTLSDR_CAPABILITIES (RAPTORHW_CAPABILITY_BIAS_T | RAPTORHW_CAPABILITY_OFFSET_TUNING | RAPTORHW_CAPABILITY_DIRECT_SAMPLING)
 
@@ -25,7 +27,7 @@ const int SUPPORTED_SAMPLE_RATES[] = {
 	250000
 };
 
-class rtlsdr_gain_tuner_t : public raptorhw_gain_t {
+class rtlsdr_gain_tuner_t : public raptorhw_gain_option_impl {
 
 public:
 	rtlsdr_gain_tuner_t(rtlsdr_dev_t* device) : device(device), current_gain_index(0), current_agc(false) {
@@ -39,9 +41,16 @@ public:
 		//Request tuner gains (which are in 1/10ths of a dB)
 		rtlsdr_get_tuner_gains(device, gains);
 	}
+	~rtlsdr_gain_tuner_t() {
+		free(gains);
+		gains = NULL;
+	}
 
-	virtual const char* get_name() override {
-		return "Gain";
+	virtual size_t get_name(char* result, size_t resultSize) override {
+		return raptorhw_strcpy(result, "Gain", resultSize);
+	}
+	virtual int get_unit() override {
+		return RAPTORHW_UNITS_DB;
 	}
 	virtual bool get_agc_supported() override {
 		return true;
@@ -61,20 +70,16 @@ public:
 		return true;
 	}
 
-	virtual int get_value_count() override {
+	virtual int get_option_count() override {
 		return gain_count;
 	}
-	virtual void get_value_label(int index, char* result, size_t resultLen) override {
+	virtual float get_option_value(int index) override {
 		//Sanity check
-		if (resultLen < 1)
-			return;
-		if (index < 0 || index >= gain_count) {
-			result[0] = 0x00;
-			return;
-		}
+		if (index < 0 || index >= gain_count)
+			return 0;
 
 		//Format
-		snprintf(result, resultLen, "%i.%i dB", gains[index] / 10, gains[index] % 10);
+		return gains[index] / 10.0f;
 	}
 
 	virtual int get_value() override {
@@ -108,46 +113,31 @@ private:
 
 };
 
-class rtlsdr_gain_group_default_t : public raptorhw_gain_group_t {
+class rtlsdr_gain_group_default_t : public raptorhw_gain_group_impl {
 
 public:
-	rtlsdr_gain_group_default_t(rtlsdr_dev_t* device) : tuner(device) {
-
+	rtlsdr_gain_group_default_t(rtlsdr_dev_t* device) {
+		put_option(new rtlsdr_gain_tuner_t(device));
 	}
 
-	virtual const char* get_name() override {
-		return "Default";
+	virtual size_t get_name(char* result, size_t resultSize) override {
+		return raptorhw_strcpy(result, "Default", resultSize);
 	}
-	virtual int get_setting_count() override {
-		return 1;
-	}
-	virtual raptorhw_gain_t* get_setting(int index) override {
-		switch (index) {
-		case 0: return &tuner;
-		}
-		return 0;
-	}
-	virtual bool select() override {
-		return true;
-	}
-
-private:
-	rtlsdr_gain_tuner_t tuner;
 
 };
 
-class rtlsdr_instance_t : public raptorhw_instance_t {
+class rtlsdr_instance_t : public raptorhw_device_impl {
 
 public:
-	rtlsdr_instance_t(char* inProduct, char* inSerial, rtlsdr_dev_t* device) :
+	rtlsdr_instance_t(raptor_rtlsdr_info_t* info, rtlsdr_dev_t* device) :
 		device(device),
-		gain_group(device),
 		bias_t_enabled(false),
 		rx_callback(NULL),
 		rx_ctx(NULL)
 	{
-		memcpy(product, inProduct, sizeof(product));
-		memcpy(serial, inSerial, sizeof(serial));
+		memcpy(&this->info, info, sizeof(raptor_rtlsdr_info_t));
+		memset(converted_buffer, 0, sizeof(converted_buffer));
+		put_gains(new rtlsdr_gain_group_default_t(device));
 	}
 
 	~rtlsdr_instance_t() {
@@ -161,12 +151,12 @@ public:
 		device = NULL;
 	}
 
-	virtual const char* get_name() override {
-		return product;
+	virtual size_t get_name(char* result, size_t resultMax) override {
+		return raptorhw_strcpy(result, info.product, resultMax);
 	}
 
-	virtual const char* get_serial() override {
-		return serial;
+	virtual size_t get_serial(char* result, size_t resultMax) override {
+		return raptorhw_strcpy(result, info.serial, resultMax);
 	}
 
 	virtual int get_capabilities() override {
@@ -216,11 +206,11 @@ public:
 		return 2000000000;
 	}
 
-	virtual int64_t get_freq() override {
+	virtual int64_t get_current_freq() override {
 		return rtlsdr_get_center_freq(device);
 	}
-	virtual bool set_freq(int64_t value) override {
-		return rtlsdr_set_center_freq(device, value) != 0;
+	virtual bool set_current_freq(int64_t value) override {
+		return rtlsdr_set_center_freq(device, value) == 0;
 	}
 
 	virtual bool get_bias_t() override {
@@ -245,6 +235,10 @@ public:
 		return rtlsdr_set_direct_sampling(device, enabled) == 0;
 	}
 
+	virtual int get_supported_samplerates_count() override {
+		//Calculate total count
+		return sizeof(SUPPORTED_SAMPLE_RATES) / sizeof(int);
+	}
 	virtual int get_supported_samplerates(int* result, int max) override {
 		//Calculate total count
 		int totalCount = sizeof(SUPPORTED_SAMPLE_RATES) / sizeof(int);
@@ -259,21 +253,15 @@ public:
 			result[i] = SUPPORTED_SAMPLE_RATES[i];
 		return i;
 	}
+
 	virtual int get_samplerate() override {
 		return rtlsdr_get_sample_rate(device);
 	}
-	virtual bool set_samplerate(int rate) override {
-		return rtlsdr_set_sample_rate(device, rate) == 0;
-	}
-
-	virtual int get_gain_group_count() override {
-		return 1;
-	}
-	virtual raptorhw_gain_group_t* get_gain_group_at(int index) override {
-		switch (index) {
-		case 0: return &gain_group;
-		}
-		return 0;
+	virtual bool set_samplerate(int index) override {
+		//Get the sample rate from the index
+		if (index < 0 || index >= (sizeof(SUPPORTED_SAMPLE_RATES) / sizeof(int)))
+			return false;
+		return rtlsdr_set_sample_rate(device, SUPPORTED_SAMPLE_RATES[index]) == 0;
 	}
 
 	virtual bool start_rx(raptorhw_instance_streaming_cb callback, void* ctx) override {
@@ -289,20 +277,21 @@ public:
 		rx_callback = callback;
 		rx_ctx = ctx;
 
-		//Reset the device buffer. Not quite sure what this does but it seems required
-		rtlsdr_reset_buffer(device);
-
-		//Begin streaming
-		return rtlsdr_read_async(device, read_callback, this, 0, RTLSDR_BUFFER_SIZE) == 0;
+		//Spawn worker thread
+		return pthread_create(&rx_worker, NULL, worker_thread, this) == 0;
 	}
 	virtual void stop_rx() override {
 		//Make sure that there is an active session
 		if (rx_callback == NULL)
 			return;
 
-		//Stop the active thread
+		//Stop rx
 		if (rtlsdr_cancel_async(device) != 0)
 			return;
+
+		//Join the worker thread
+		void* result;
+		pthread_join(rx_worker, &result);
 
 		//Clear out the internal arguments
 		rx_callback = NULL;
@@ -310,85 +299,106 @@ public:
 	}
 
 private:
-	char product[RTLSDR_INFO_BUFFER_SIZE];
-	char serial[RTLSDR_INFO_BUFFER_SIZE];
+	raptor_rtlsdr_info_t info;
 
 	rtlsdr_dev_t* device;
 	bool bias_t_enabled;
-	rtlsdr_gain_group_default_t gain_group;
 	float converted_buffer[RTLSDR_BUFFER_SIZE];
 
+	pthread_t rx_worker;
 	raptorhw_instance_streaming_cb rx_callback;
 	void* rx_ctx;
+
+	static void* worker_thread(void* ctxBase) {
+		//Get the true context
+		rtlsdr_instance_t* ctx = (rtlsdr_instance_t*)ctxBase;
+
+		//Reset the device buffer. Not quite sure what this does but it seems required
+		rtlsdr_reset_buffer(ctx->device);
+
+		//Begin streaming...this will hang until we stop
+		int result = rtlsdr_read_async(ctx->device, read_callback, ctx, 0, RTLSDR_BUFFER_SIZE) == 0;
+
+		//Exit with the return value
+		pthread_exit((void*)result);
+		return 0;
+	}
 
 	static void read_callback(unsigned char* buf, uint32_t len, void* ctxBase) {
 		//Get the true context
 		rtlsdr_instance_t* ctx = (rtlsdr_instance_t*)ctxBase;
 
 		//Sanity check
-		assert(len < RTLSDR_BUFFER_SIZE);
+		assert(len <= RTLSDR_BUFFER_SIZE);
 		assert(len % 2 == 0);
 
 		//Convert samples using the lookup table
-		for (int i = 0; i < len; i++)
+		for (uint32_t i = 0; i < len; i++)
 			ctx->converted_buffer[i] = SAMPLE_CONVERSION_TABLE[buf[i]];
 
 		//Send callback. We cut the length in half to convert to complex samples
-		ctx->rx_callback(ctx, ctx->rx_ctx, (raptorhw_complex_t*)ctx->converted_buffer, len / 2);
+		ctx->rx_callback((raptorhw_instance_t*)ctx, ctx->rx_ctx, (raptorhw_complex_t*)ctx->converted_buffer, len / 2);
 	}
 
 };
 
-class rtlsdr_candidate_t : public raptorhw_candidate_t {
+class rtlsdr_candidate_t : public raptorhw_candidate_impl {
 
 public:
-	rtlsdr_candidate_t(uint32_t index, char* inProduct, char* inSerial) : index(index)
+	rtlsdr_candidate_t(raptor_rtlsdr_info_t* info)
 	{
-		memcpy(product, inProduct, sizeof(product));
-		memcpy(serial, inSerial, sizeof(serial));
+		memcpy(&this->info, info, sizeof(raptor_rtlsdr_info_t));
 	}
 
-	virtual const char* get_name() override {
-		return product;
+	virtual size_t get_name(char* result, size_t resultMax) override {
+		return raptorhw_strcpy(result, info.product, resultMax);
 	}
 
-	virtual const char* get_serial() override {
-		return serial;
+	virtual size_t get_serial(char* result, size_t resultMax) override {
+		return raptorhw_strcpy(result, info.serial, resultMax);
 	}
 
 	virtual int get_capabilities() override {
 		return RTLSDR_CAPABILITIES;
 	}
 
-	virtual raptorhw_instance_t* create_instance() override {
+	virtual raptorhw_device_impl* open() override {
 		//Open the RTL-SDR device
 		rtlsdr_dev_t* device;
-		if (rtlsdr_open(&device, index) != 0)
+		if (rtlsdr_open(&device, info.index) != 0)
 			return NULL;
 
 		//Wrap the device
-		return new rtlsdr_instance_t(product, serial, device);
+		return new rtlsdr_instance_t(&info, device);
 	}
 
 private:
-	uint32_t index;
-	char product[RTLSDR_INFO_BUFFER_SIZE];
-	char serial[RTLSDR_INFO_BUFFER_SIZE];
+	raptor_rtlsdr_info_t info;
 
 };
 
-int raptorhw_rtlsdr_search(raptorhw_candidate_t** candidates, int max) {
-	//Request the device count
-	uint32_t count = rtlsdr_get_device_count();
+class rtlsdr_module_t : public raptorhw_module_impl {
 
-	//Enumerate and create devices
-	uint32_t i = 0;
-	char manufacturer[RTLSDR_INFO_BUFFER_SIZE];
-	char product[RTLSDR_INFO_BUFFER_SIZE];
-	char serial[RTLSDR_INFO_BUFFER_SIZE];
-	for (i = 0; i < max && i < count && rtlsdr_get_device_usb_strings(i, manufacturer, product, serial) == 0; i++) {
-		candidates[i] = new rtlsdr_candidate_t(i, product, serial);
+	virtual size_t get_name(char* result, size_t resultSize) override
+	{
+		return raptorhw_strcpy(result, "RTL-SDR", resultSize);
 	}
 
-	return i;
+	virtual void search(raptorhw_module_impl_search_cb callback, void* callbackCtx) override
+	{
+		//Request the device count
+		uint32_t count = rtlsdr_get_device_count();
+
+		//Enumerate and create devices
+		uint32_t i = 0;
+		raptor_rtlsdr_info_t info;
+		for (i = 0; i < count && query_rtlsdr_info(i, &info); i++) {
+			callback(callbackCtx, new rtlsdr_candidate_t(&info));
+		}
+	}
+
+};
+
+raptorhw_module_impl* raptorhw_device_rtlsdr_create() {
+	return new rtlsdr_module_t();
 }

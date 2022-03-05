@@ -1,8 +1,8 @@
-[submodule "src/devices/airspy/lib"]
-	path = src/devices/airspy/lib
-	url = https://github.com/Roman-Port/airspyone_host-windows
-[submodule "src/devices/rtlsdr/lib"]
-	path = src/devices/rtlsdr/lib
-	url = https://github.com/Roman-Port/rtl-sdr-windows
 [submodule "https://github.com/Roman-Port/airspyone_host-windows"]
 	url = lib
+[submodule "devices/airspy/lib"]
+	path = devices/airspy/lib
+	url = https://github.com/Roman-Port/RaptorHardware-airspy
+[submodule "devices/rtlsdr/lib"]
+	path = devices/rtlsdr/lib
+	url = https://github.com/Roman-Port/RaptorHardware-rtlsdr
