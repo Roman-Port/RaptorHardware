@@ -122,3 +122,12 @@ install(
   COMPONENT
     Devel
 )
+
+#############################
+# ADD DEMOS (if enabled)
+#############################
+
+option(RAPTORHW_BUILD_DEMOS "Build demo programs." OFF)
+if (RAPTORHW_BUILD_DEMOS)
+add_subdirectory(demos)
+endif()

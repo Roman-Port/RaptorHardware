@@ -203,8 +203,9 @@ EXPORT_API int raptorhw_instance_get_samplerate(raptorhw_instance_t* device);
 /// Sets the current sample rate to the value specified.
 /// </summary>
 /// <param name="device">The device instance handled obtained from raptorhw_candidate_create_instance.</param>
+/// <param name="index">The index of the sample rate in the list of rates.</param>
 /// <returns>0 or 1. 1 is returned if the operation was successful, otherwise 0.</returns>
-EXPORT_API RAPTORHW_RESULT raptorhw_instance_set_samplerate(raptorhw_instance_t* device, int rate);
+EXPORT_API RAPTORHW_RESULT raptorhw_instance_set_samplerate(raptorhw_instance_t* device, int index);
 
 /// <summary>
 /// Get the number of gain settings available.
