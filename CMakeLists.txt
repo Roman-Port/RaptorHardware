@@ -50,6 +50,14 @@ add_subdirectory(devices/airspy)
 list(APPEND RAPTORHW_DEVICE_LIBS "raptorhw-devices-airspy")
 endif()
 
+# AIRSPYHF
+option(RAPTORHW_DEVICE_AIRSPYHF "Enable AirSpy HF+ support" ON)
+if (RAPTORHW_DEVICE_AIRSPYHF)
+add_compile_definitions(RAPTORHW_DEVICE_AIRSPYHF)
+add_subdirectory(devices/airspyhf)
+list(APPEND RAPTORHW_DEVICE_LIBS "raptorhw-devices-airspyhf")
+endif()
+
 # RTLSDR
 option(RAPTORHW_DEVICE_RTLSDR "Enable RTL-SDR support" ON)
 if (RAPTORHW_DEVICE_RTLSDR)

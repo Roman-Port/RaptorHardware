@@ -6,3 +6,6 @@
 [submodule "devices/rtlsdr/lib"]
 	path = devices/rtlsdr/lib
 	url = https://github.com/Roman-Port/RaptorHardware-rtlsdr
+[submodule "devices/airspyhf/lib"]
+	path = devices/airspyhf/lib
+	url = https://github.com/Roman-Port/RaptorHardware-airspyhf

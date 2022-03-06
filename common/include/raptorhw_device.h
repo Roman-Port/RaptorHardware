@@ -1,9 +1,11 @@
 #pragma once
 #include <raptorhw_gain.h>
+#include <raptorhw_custom_property.h>
 #include <stdint.h>
 #include <stdio.h>
 
 #define RAPTORHW_MAX_GAIN_GROUPS 8
+#define RAPTORHW_MAX_CUSTOM_PROPERTIES 8
 
 class raptorhw_device_impl {
 
@@ -44,6 +46,9 @@ public:
 	int get_gains_count();
 	raptorhw_gain_group_impl* get_gains_at(int index);
 
+	int get_property_count();
+	raptorhw_custom_property_impl* get_property_at(int index);
+
 	virtual int get_supported_samplerates_count() = 0;
 	virtual int get_supported_samplerates(int* result, int max) = 0;
 
@@ -55,9 +60,12 @@ public:
 
 protected:
 	void put_gains(raptorhw_gain_group_impl* option);
+	void put_property(raptorhw_custom_property_impl* item);
 
 private:
 	raptorhw_gain_group_impl* gains[RAPTORHW_MAX_GAIN_GROUPS];
 	int gains_count;
+	raptorhw_custom_property_impl* properties[RAPTORHW_MAX_CUSTOM_PROPERTIES];
+	int properties_count;
 
 };

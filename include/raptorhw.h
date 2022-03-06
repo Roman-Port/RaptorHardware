@@ -15,10 +15,18 @@
 #define RAPTORHW_UNITS_UNSPECIFIED 0
 #define RAPTORHW_UNITS_DB 1
 
+/* CUSTOM PROPERTY FLAGS */
+
+#define RAPTORHW_CUSTOMPROP_WRITABLE (1 << 0)
+#define RAPTORHW_CUSTOMPROP_STRING (1 << 1)
+#define RAPTORHW_CUSTOMPROP_INT (1 << 2)
+#define RAPTORHW_CUSTOMPROP_BOOL (1 << 3) /* MUST ALSO HAVE RAPTORHW_CUSTOMPROP_INT */
+
 /* TYPES */
 
 typedef struct { void* placeholder; } raptorhw_gain_t;
 typedef struct { void* placeholder; } raptorhw_gain_group_t;
+typedef struct { void* placeholder; } raptorhw_custom_property_t;
 typedef struct { void* placeholder; } raptorhw_instance_t;
 typedef struct { void* placeholder; } raptorhw_candidate_t;
 typedef struct { void* placeholder; } raptorhw_context_t;
@@ -213,6 +221,21 @@ EXPORT_API int raptorhw_instance_get_gain_group_count(raptorhw_instance_t* devic
 EXPORT_API raptorhw_gain_group_t* raptorhw_instance_get_gain_group_at(raptorhw_instance_t* device, int index);
 
 /// <summary>
+/// Gets the number of custom properties on the device.
+/// </summary>
+/// <param name="device">The device instance handled obtained from raptorhw_candidate_create_instance.</param>
+/// <returns></returns>
+EXPORT_API int raptorhw_instance_get_custom_property_count(raptorhw_instance_t* device);
+
+/// <summary>
+/// Gets a pointer to the custom property at the specified index.
+/// </summary>
+/// <param name="device">The device instance handled obtained from raptorhw_candidate_create_instance.</param>
+/// <param name="index">The index of the property, starting at 0.</param>
+/// <returns></returns>
+EXPORT_API raptorhw_custom_property_t* raptorhw_instance_get_custom_property_at(raptorhw_instance_t* device, int index);
+
+/// <summary>
 /// Starts receiving samples asynchronously. For each sample buffer, the callback will be called. Ran until raptorhw_instance_stop_rx.
 /// </summary>
 /// <param name="device">The device instance handled obtained from raptorhw_candidate_create_instance.</param>
@@ -232,6 +255,15 @@ EXPORT_API void raptorhw_instance_stop_rx(raptorhw_instance_t* device);
 /// </summary>
 /// <param name="device">The device instance handled obtained from raptorhw_candidate_create_instance.</param>
 EXPORT_API void raptorhw_instance_close(raptorhw_instance_t* device);
+
+/* CUSTOM PROPERTY METHODS */
+
+EXPORT_API size_t raptorhw_customprop_get_name(raptorhw_custom_property_t* prop, char* result, size_t resultLen);
+EXPORT_API int raptorhw_customprop_get_flags(raptorhw_custom_property_t* prop);
+EXPORT_API int raptorhw_customprop_read_string(raptorhw_custom_property_t* prop, char* result, size_t resultLen, size_t* resultWritten);
+EXPORT_API int raptorhw_customprop_write_string(raptorhw_custom_property_t* prop, char* input, size_t inputLen);
+EXPORT_API int raptorhw_customprop_read_int(raptorhw_custom_property_t* prop, int* result);
+EXPORT_API int raptorhw_customprop_write_int(raptorhw_custom_property_t* prop, int value);
 
 /* GAIN GROUP METHODS */
 

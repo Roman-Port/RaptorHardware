@@ -242,6 +242,14 @@ raptorhw_gain_group_t* raptorhw_instance_get_gain_group_at(raptorhw_instance_t* 
     return (raptorhw_gain_group_t*)((raptorhw_device_impl*)device)->get_gains_at(index);
 }
 
+int raptorhw_instance_get_custom_property_count(raptorhw_instance_t* device) {
+    return ((raptorhw_device_impl*)device)->get_property_count();
+}
+
+raptorhw_custom_property_t* raptorhw_instance_get_custom_property_at(raptorhw_instance_t* device, int index) {
+    return (raptorhw_custom_property_t*)((raptorhw_device_impl*)device)->get_property_at(index);
+}
+
 /// <summary>
 /// Starts receiving samples asynchronously. For each sample buffer, the callback will be called. Ran until raptorhw_instance_stop_rx.
 /// </summary>
@@ -267,6 +275,32 @@ void raptorhw_instance_stop_rx(raptorhw_instance_t* device) {
 /// <param name="device">The device instance handled obtained from raptorhw_candidate_create_instance.</param>
 void raptorhw_instance_close(raptorhw_instance_t* device) {
     delete ((raptorhw_device_impl*)device);
+}
+
+/* CUSTOM PROPERTY METHODS */
+
+size_t raptorhw_customprop_get_name(raptorhw_custom_property_t* prop, char* result, size_t resultLen) {
+    return ((raptorhw_custom_property_impl*)prop)->get_name(result, resultLen);
+}
+
+int raptorhw_customprop_get_flags(raptorhw_custom_property_t* prop) {
+    return ((raptorhw_custom_property_impl*)prop)->get_flags();
+}
+
+int raptorhw_customprop_read_string(raptorhw_custom_property_t* prop, char* result, size_t resultLen, size_t* resultWritten) {
+    return ((raptorhw_custom_property_impl*)prop)->read_string(result, resultLen, resultWritten);
+}
+
+int raptorhw_customprop_write_string(raptorhw_custom_property_t* prop, char* input, size_t inputLen) {
+    return ((raptorhw_custom_property_impl*)prop)->write_string(input, inputLen);
+}
+
+int raptorhw_customprop_read_int(raptorhw_custom_property_t* prop, int* result) {
+    return ((raptorhw_custom_property_impl*)prop)->read_int(result);
+}
+
+int raptorhw_customprop_write_int(raptorhw_custom_property_t* prop, int value) {
+    return ((raptorhw_custom_property_impl*)prop)->write_int(value);
 }
 
 /* GAIN GROUP METHODS */
