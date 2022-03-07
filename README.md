@@ -22,6 +22,12 @@ The usage of the library follows these principles:
 * Close the device with ``raptorhw_instance_close``.
 * Finally, after you're done with the library, close it with ``raptorhw_context_destroy``.
 
+It's recommended to check out a simple demo program at ``demos/simple/main.cpp``. Additionally, you can look at the reference at the bottom of this file.
+
+## Wrapper Libraries
+
+* [CSharp/.NET](https://github.com/Roman-Port/RaptorHardwareDotNet)
+
 ## Android
 
 Android, while **not supported just yet**, is expected to be implemented soon. This'll allow you to provide a callback in which you'll need to show the device access dialog in Android. More details will come soon!
